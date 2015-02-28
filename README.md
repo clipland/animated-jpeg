@@ -23,7 +23,7 @@ Why?
 
 Animated JPEG files are more efficient than animated GIFs. That said, the file
 format described here is simply a concatenation of JPEGs, so there is no
-interframe compression, resulting in lower overall compression in comparison
+inter-frame compression, resulting in lower overall compression in comparison
 with modern video formats.
 
 Animated JPEG files are very suitable for flip-book like short animations, with
@@ -33,7 +33,7 @@ possible with most video containers.
 As adding and removing the control APP0 tag to a JPEG does not trigger a
 recompression of the actual image data payload, forming an animation, or
 breaking it into individual files again, is a lossless (no new "generation")
-JPEG transform and non-destructive.
+JPEG/JFIF transform and non-destructive.
 
 MJPEG commonly has no "display control" metadata embedded. Frame rate is either
 set via HTTP header (not available when the stream is not served by a web
@@ -86,3 +86,6 @@ Copyright 2013-2015 Clipland GmbH. All rights reserved.
 This library is free software, dual-licensed under [GPLv3](http://www.gnu.org/licenses/gpl)
 and [Perl Artistic 2](http://opensource.org/licenses/Artistic-2.0).
 You can redistribute it and/or modify it under the same terms as Perl itself.
+
+AJPEG specifications are licensed to the public under the GNU Free Documentation
+License (GNU FDL or GFDL) Version 1.3.
