@@ -44,9 +44,15 @@ server) or assumed by the player application (to be a common video fps around
 
 Please refer to the [Official Specifications](SPECIFICATIONS.md) for details.
 
-## INSTALLATION
+## REFERENCE IMPLEMENTATION
 
-For bundled Perl modules, on command-line:
+Bundled with this distribution is a reference implementation, written in Perl,
+[Image::Animated::JPEG](http://search.cpan.org/perldoc?Image::Animated::JPEG).
+
+### INSTALLATION
+
+To install this implementation and accompanying scripts, do this on
+command-line:
 
     wget https://github.com/clipland/animated-jpeg/archive/master.tar.gz
     tar xvf master.tar.gz
@@ -56,11 +62,11 @@ For bundled Perl modules, on command-line:
     make test
     sudo make install
 
-or, once released via CPAN:
+or, via CPAN:
 
     sudo cpan -i Image::Animated::JPEG
 
-## CAVEATS
+### CAVEATS
 
 This is alpha quality software. Do not test it on important data or files.
 
