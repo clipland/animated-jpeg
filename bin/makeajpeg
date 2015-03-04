@@ -1,0 +1,162 @@
+#!/usr/bin/perl
+
+# adds an APP0 AJPG ("Animated JPEG") segment to a JPEG
+
+use lib 'lib';
+use Image::MetaData::JPEG;
+use Data::Dumper;
+# use Data::HexDump;
+use Encode;
+use File::Basename;
+use Getopt::Long;
+use Image::Animated::JPEG;
+use Pod::Usage;
+
+
+Getopt::Long::Configure('no_ignore_case');
+GetOptions(
+	'output-file|o:s'	=> \my $output_file,
+	'delay|d:s'		=> \my $delay,
+	'repeat|r:s'		=> \my $repeat,
+	'keep-mtime'		=> \my $keep_mtime,
+	'metadata-filename'	=> \my $metadata_filename,
+	'debug|d'		=> \my $debug,
+	'force|f'		=> \my $force,
+	'help|h'		=> \my $help,
+) or pod2usage(2);
+pod2usage(1) unless !$help;
+
+pod2usage({ -message => "\n Please supply an output-file and a number of JPEG images (frames)\n on command-line.\n Example makeajpeg -o out.jpg frame1.jpg frame2.jpg\n", exitval => 2 }) unless $ARGV[0] && $output_file;
+die " Output-file $output_file exists! (Use --force to overwrite)\n" if -f $output_file && !$force;
+for(@ARGV){ die " Could not find file $_!\n" unless -f $_; }
+
+my @temp_files;
+my @concat_files;
+my $cnt;
+for(@ARGV){
+	$cnt++;
+
+	if($cnt == 1 || $metadata_filename){
+		## load the file into Image::MetaData
+		my $file = new Image::MetaData::JPEG($_);
+
+		my %properties;
+		$properties{delay} = $delay if defined($delay);
+		$properties{repeat} = $delay if defined($repeat);
+		$properties{metadata}->{filename} = basename($_) if $metadata_filename;
+
+		## create an APP0 segment
+		my $ref = Image::Animated::JPEG::encode_ajpeg_marker({ %properties }, { debug => $debug });
+
+		## insert our APP0 segment
+		$file->insert_segments(
+			Image::MetaData::JPEG::Segment->new(
+				'APP0',
+				\$ref,
+				'NOPARSE',
+			)
+		);
+
+		my $temp_output_file = '/tmp/'. basename($output_file) . '-'. $cnt;
+
+		print " Frame $cnt '$_': Appending APP0 segment to temp output file $temp_output_file\n" if $debug;
+
+		## and write to output-file
+		$file->save($temp_output_file);
+
+		push(@temp_files, $temp_output_file);
+	}else{
+		print " Frame $cnt '$_': Queueing unmodified for concatenation\n" if $debug;
+		push(@concat_files, $_); # not so temp..
+	}
+}
+
+print "Temp files: \n". join("\n",@temp_files) ."\n" if $debug;
+print "Concatenating to output file $output_file\n" if $debug;
+system("cat @temp_files @concat_files > $output_file");
+
+for(@temp_files){
+	print " removing temp file $_ \n" if $debug;
+	unlink($_) or die "$!";
+}
+
+if($keep_mtime){
+	print "Adjusting mtime of output file\n" if $debug;
+	my @stat = stat($ARGV[0]);
+	utime(undef, $stat[9], $output_file);
+}
+
+__END__
+
+=head1 NAME
+
+makeajpeg - Make Animated JPEGs (AJPEGs) on command-line
+
+=head1 SYNOPSIS
+
+  makeajpeg [options] -o <output-file> input-files ...
+
+=head1 OPTIONS
+
+=over
+
+=item B<--output-file, -o>
+
+Output file for the resulting concatenated JPEGs, aka the Animated JPEG file or
+MJPEG. Mandatory!
+
+Some players recognise Motion-JPEGs from file suffix (mplayer), so it might make
+sense to use the .mjpeg extension. The Animated JPEG standard recommends .ajpeg.
+
+=item B<--delay, -d>
+
+Delay in milliseconds, the time each frame is shown within the animation ("ms",
+that's 1000ms = 1 sec). Defaults to 100ms (10 fps).
+
+=item B<--repeat, -r>
+
+Defines the repeat behaviour of the animation: 0 for continuous playback,
+numbers above zero for a fixed number of plays. Defaults to 0 (continuous
+playback).
+
+=item B<--keep-mtime>
+
+Flag. Tells makeajpeg to adjust the file modification timestamp (mtime) of the
+output-file to be the same as the mtime of the first frame.
+
+=item B<--metadata-filename>
+
+Flag. Tells makeajpeg to store the filename of the file the frame originally was
+stored as into each AJPEG frame. By keeping this data with each frame, you can
+restore the original file structure when an AJEPG animation is broken into files
+again.
+
+=item B<--force, -f>
+
+Flag. Force overwriting of an existing output file.
+
+=item B<--debug, -d>
+
+Flag. Switch debug output on.
+
+=item B<--help, -h>
+
+Flag. Print usage info.
+
+=back
+
+=head1 SEE ALSO
+
+More information about what this script does can be found in the documentation
+of the backend module L<Image::Animated::JPEG>.
+
+=head1 AUTHOR
+
+Clipland GmbH L<http://www.clipland.com/>
+
+=head1 COPYRIGHT & LICENSE
+
+Copyright 2012-2015 Clipland GmbH. All rights reserved.
+
+This library is free software, dual-licensed under L<GPLv3|http://www.gnu.org/licenses/gpl>/L<AL2|http://opensource.org/licenses/Artistic-2.0>.
+You can redistribute it and/or modify it under the same terms as Perl itself.

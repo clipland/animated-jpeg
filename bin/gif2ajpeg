@@ -1,0 +1,132 @@
+#!/usr/bin/perl
+
+# convert an animated GIF to an Animated JPEG
+
+use lib 'lib';
+use Image::MetaData::JPEG;
+use Data::Dumper;
+use Data::HexDump;
+use Encode;
+use Getopt::Long;
+use Image::Animated::JPEG;
+use Pod::Usage;
+use File::Path ();
+
+my $imager = eval "use Imager; 1";
+
+Getopt::Long::Configure('no_ignore_case');
+GetOptions(
+	'quality|q:s'		=> \(my $quality = 75),
+	'keep-mtime'		=> \my $keep_mtime,
+	'debug|d'		=> \my $debug,
+	'force|f'		=> \my $force,
+	'help'			=> \my $help,
+) or pod2usage(2);
+pod2usage(1) unless !$help;
+
+pod2usage({ -message => "\n Please supply an output-file and an input-file\n on command-line.\n Example gif2ajpeg input.gif output.jpeg\n", exitval => 2 }) unless @ARGV == 2;
+die " Output-file $ARGV[1] exists! (Use --force to overwrite)\n" if -f $ARGV[1] && !$force;
+die " Could not find file $ARGV[0]!\n" unless -f $ARGV[0];
+die " Input-file is not a GIF file!\n" unless $ARGV[0] =~ /\.gif$/i; # todo: probe magic-number
+
+my $input_file = shift;
+my $output_file = shift;
+my $temp_dir = '/tmp/' . time();
+
+# todo: for each frame, also repeat value, etc.
+print "Probing input-file for delay(s) and repeat setting \n" if $debug;
+my $img = Imager->new();
+$img->read(file => $input_file) or die "Imager can't read input-file: ",$img->errstr,"\n";
+
+my $delay = $img->tags(name => 'gif_delay');
+$delay *= 10; # GIF delays are in fractions of 1/100sec (8 => 80ms)
+print " Setting frame delay to $delay \n" if $debug;
+
+my $repeat = $img->tags(name => 'gif_loop'); # 0 means continuous play, the default in AJPEG
+print " Setting repeat to $repeat \n" if $debug;
+
+print "Using ImageMagick's convert to extract individual frames from input-file $input_file\n" if $debug;
+mkdir($temp_dir) or die $!;
+system("convert -coalesce -quality $quality $input_file ". $temp_dir ."/frame_%05d.jpg");
+
+opendir(my $dh, $temp_dir) or die "can't opendir temp dir: $!";
+my @files = readdir($dh);
+closedir($dh);
+
+my @frames;
+for(sort @files){ next if $_ =~ /^\./; push(@frames, $temp_dir .'/'. $_); }
+
+if($keep_mtime){
+	print "Adjusting mtime of first frame temp file (for makeajpeg)\n" if $debug;
+	my @stat = stat($input_file);
+	utime(undef, $stat[9], $frames[0]);
+}
+
+my $script;
+if(-f 'bin/makeajpeg'){ $script = 'perl bin/makeajpeg'; }else{ 'makeajpeg' } # installed or relative?
+
+print "Using $script to produce AJPEG output-file $output_file\n" if $debug;
+system("$script "
+	. ($force ? '--force ' : '')
+	. ($debug ? '--debug ' : '')
+	. ($keep_mtime ? '--keep-mtime ' : '')
+	. (defined($delay) ? "--delay $delay " : '')
+	. (defined($repeat) ? "--repeat $repeat " : '')
+	. "-o $output_file @frames");
+
+print "Removing temporary files and dir $temp_dir\n" if $debug;
+File::Path::remove_tree( $temp_dir ) or die "Error deleting temporary directory $temp_dir: $!";
+
+
+__END__
+
+=head1 NAME
+
+gif2ajpeg - Convert an animated GIF to an Animated JPEG (AJPEG) on command-line
+
+=head1 SYNOPSIS
+
+  gif2ajpeg [options] <input-file> <output-file>
+
+=head1 OPTIONS
+
+=over
+
+=item B<--quality, -q>
+
+When frames are extracted from the animated GIF, gif2ajpeg converts them to
+JPEGs. The quality setting allows to control the per-frame JPEG compression
+quality. Defaults to 75, but lower values usually yield good results.
+
+=item B<--keep-mtime>
+
+Flag. Tells gif2ajpeg to adjust the file modification timestamp (mtime) of the
+output-file to be the same as the mtime of the input-file.
+
+=item B<--force, -f>
+
+Flag. Force overwriting of an existing output file.
+
+=over
+
+=item B<--debug, -d>
+
+Flag. Switch debug output on.
+
+=back
+
+=head1 SEE ALSO
+
+More information about what this script does can be found in the documentation
+of the backend module L<Image::Animated::JPEG>.
+
+=head1 AUTHOR
+
+Clipland GmbH L<http://www.clipland.com/>
+
+=head1 COPYRIGHT & LICENSE
+
+Copyright 2012-2015 Clipland GmbH. All rights reserved.
+
+This library is free software, dual-licensed under L<GPLv3|http://www.gnu.org/licenses/gpl>/L<AL2|http://opensource.org/licenses/Artistic-2.0>.
+You can redistribute it and/or modify it under the same terms as Perl itself.

@@ -114,6 +114,9 @@ Coming versions might allow:
 
 * Encoding values as 3-byte integers.
 
+* Dissolve transition between frames, via to-be created "Overlay strategy" or
+  Disposal strategy
+
 
 ## The APP0 AJPEG Segment
 
