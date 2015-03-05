@@ -35,10 +35,11 @@ recompression of the actual image data payload, forming an animation, or
 breaking it into individual files again, is a lossless (no new "generation")
 JPEG/JFIF transform and non-destructive.
 
-MJPEG commonly has no "display control" metadata embedded. Frame rate is either
+MJPEG commonly has no "playback control" metadata embedded. Frame rate is either
 set via HTTP header (not available when the stream is not served by a web
-server) or assumed by the player application (to be a common video fps around
-25fps; try mplayer, avplay, vlc).
+server) or assumed by the player application (to be a common video frame-rate
+of about 25fps; try mplayer, avplay, vlc). AJPEG offers a facility to set fps,
+and current specs define a default of 10 frames-per-second.
 
 ## SPECIFICATIONS
 
