@@ -5,7 +5,7 @@ use warnings;
 
 use Encode;
 
-our $VERSION = '0.01_1';
+our $VERSION = '0.01_2';
 
 sub index {
 	my $io_file = shift;

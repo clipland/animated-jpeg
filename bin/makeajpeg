@@ -38,7 +38,7 @@ for(@ARGV){
 
 	if($cnt == 1 || $metadata_filename){
 		## load the file into Image::MetaData
-		my $file = new Image::MetaData::JPEG($_);
+		my $file = new Image::MetaData::JPEG($_) or die $!;
 
 		my %properties;
 		$properties{delay} = $delay if defined($delay);
