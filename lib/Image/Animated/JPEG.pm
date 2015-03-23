@@ -535,7 +535,7 @@ Nothing.
 
 L<Image::MetaData::JPEG>, L<Image::Info>
 
-This module and the L<Animated JPEG specifications|https://github.com/clipland/animated-jpeg/SPECIFICATIONS.md>
+This module and the L<Animated JPEG specifications|https://github.com/clipland/animated-jpeg/blob/master/SPECIFICATIONS.md>
 currently reside on L<github|https://github.com/clipland/animated-jpeg>.
 
 Specifications are also bundled with this distribution.
