@@ -65,7 +65,7 @@ command-line:
 
 or, via CPAN:
 
-    sudo cpan -i Image::Animated::JPEG
+    sudo cpan -i CLIPLAND/Image-Animated-JPEG-0.01_1.tar.gz
 
 ### CAVEATS
 
