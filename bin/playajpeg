@@ -64,6 +64,7 @@ sub new {
 		delay	=> 100,
 	};
 
+	my $error;
 	if(@ARGV > 1){
 		print "Reading multiple files as frames\n";
 
@@ -82,7 +83,7 @@ sub new {
 		}
 	}else{
 		if(!@ARGV){
-			print "File path collection dialog...\n";
+			print "No files supplied. Opening file path collection dialog...\n";
 			my $file_dialog = Wx::FileDialog->new($self, "Please select an AJPEG file", '', '', "JPEG files (*.jpg,*.jpeg,*.ajpeg,*.mjpeg)|*.jpg;*.jpeg;*.ajpeg;*.mjpeg;|All files (*.*)|*.*", wxFD_OPEN);
 
 			if($file_dialog->ShowModal == wxID_CANCEL){ exit; }
@@ -93,14 +94,7 @@ sub new {
 			push(@ARGV,$path);
 		}
 
-		print "Opening file $ARGV[0] ...";
-		open(my $io_file, '<', $ARGV[0]) or die $!;
-		binmode($io_file);
-		print " done.\n";
-
-		print "Building file index..."; print "\n" if $self->{debug};
-		$self->{frames} = Image::Animated::JPEG::index($io_file, { debug => $self->{debug} });
-		print " done.\n";
+		$self->file_open($ARGV[0]) or ($error = 1);
 	}
 
 	Wx::Event::EVT_TIMER($self, -1, \&OnTimer);
@@ -115,10 +109,13 @@ sub new {
 		}
 	});
 
+	die "Error opening file!" if $error;
+
 	print "Entering play mode...\n";
 	Wx::InitAllImageHandlers();
-	$self->{index} = 0;
-	$self->{parse_next} = 1;
+#	$self->{scale} = 1;
+#	$self->{index} = 0;
+#	$self->{parse_next} = 1;
 	$self->{'default'} = $default; # hand over
 	$self->OnTimer();
 
@@ -127,6 +124,28 @@ sub new {
 		$self->SetFocus();
 
 	$self;
+}
+
+sub file_open {
+	my ($self, $file) = @_;
+
+	print "Opening file $file ...";
+	open(my $io_file, '<', $file) or die $!;
+	binmode($io_file);
+	print " done.\n";
+
+	print "Building file index..."; print "\n" if $self->{debug};
+	$self->{frames} = Image::Animated::JPEG::index($io_file, { debug => $self->{debug} });
+
+	print " done.\n";
+
+	$self->{scale} = 1;
+	$self->{index} = 0;
+	$self->{parse_next} = 1;
+
+	delete($self->{laid_out});
+
+	return 1;
 }
 
 sub index_next {
@@ -196,11 +215,91 @@ sub play {
 	}
 }
 
+sub scale {
+	my ($self,$scale) = @_;
+
+	if($scale == 1){
+		print " set scale 1:1 \n";
+		$self->{scale} = 1;
+	}elsif($scale =~ /^\d$/){
+		print " set scale x". $scale ." \n";
+		$self->{scale} = $scale;
+	}elsif($scale eq 'up'){
+		$self->{scale} += 0.25 if $self->{scale} < 7;
+	}elsif($scale eq 'down'){
+		$self->{scale} -= 0.25 if $self->{scale} > 0.25;
+	}
+
+	$self->{resize} = 1;
+}
+
+sub file_navigation {
+	my ($self,$which) = @_;
+
+	if(@ARGV > 1){
+		print " Changing file is only available when playajpeg is invoked with a single file!\n";
+		return;
+	}
+
+	$self->{play_dir} = path($ARGV[0])->parent->stringify() unless $self->{play_dir};
+	$self->{play_file_basename} = path($ARGV[0])->basename unless $self->{play_file_basename};
+
+	opendir(my $dh, $self->{play_dir}) or die "can't opendir play_dir: $!";
+	my @files = readdir($dh);
+	closedir($dh);
+
+	unless($self->{play_dir_files}){
+		print " file_navigation: building play_dir_files\n" if $self->{debug};
+		for(sort { lc($a) cmp lc($b) } @files){
+			next if $_ =~ /^\./;
+			next unless $_ =~ /\.ajpeg$/; # todo: actually probe files' magic and/or JPEGs for the AJEPG marker
+			push(@{ $self->{play_dir_files} }, path($self->{play_dir},$_)->stringify);
+			if($_ eq $self->{play_file_basename}){
+				$self->{play_dir_play_file_pos} = @{ $self->{play_dir_files} } - 1;
+				print " file_navigation: play_dir_play_file_pos:$self->{play_dir_play_file_pos}\n" if $self->{debug};
+			}
+		}
+	}
+
+	if($which eq 'previous'){
+		print " Play previous AJPEG-file from dir $self->{play_dir}\n";
+
+		if($self->{play_dir_play_file_pos} <= 0){
+			$self->{play_dir_play_file_pos} = @{ $self->{play_dir_files} } - 1;
+		}else{
+			$self->{play_dir_play_file_pos} = $self->{play_dir_play_file_pos} - 1;
+		}
+		my $play_file = $self->{play_dir_files}->[ $self->{play_dir_play_file_pos} ];
+		print " Play previous file: pos:$self->{play_dir_play_file_pos}, file:$play_file\n";
+
+		$self->file_open($play_file);
+	}elsif($which eq 'next'){
+		print " Play next AJPEG-file from dir $self->{play_dir}\n";
+		if($self->{play_dir_play_file_pos} >= (@{ $self->{play_dir_files} } - 1)){
+			$self->{play_dir_play_file_pos} = 0;
+		}else{
+			$self->{play_dir_play_file_pos} = $self->{play_dir_play_file_pos} + 1;
+		}
+		my $play_file = $self->{play_dir_files}->[ $self->{play_dir_play_file_pos} ];
+		print " Play next file: pos:$self->{play_dir_play_file_pos}, file:$play_file\n";
+
+		$self->file_open($play_file);
+	}
+}
+
 sub OnMousewheel {
 	if( $_[1]->GetWheelRotation() > 1){
-		$_[0]->step('forward');
+		if($_[1]->ShiftDown()){
+			$_[0]->scale('up');
+		}else{
+			$_[0]->step('forward');
+		}
 	}else{
-		$_[0]->step('backward');
+		if($_[1]->ShiftDown()){
+			$_[0]->scale('down');
+		}else{
+			$_[0]->step('backward');
+		}
 	}
 }
 
@@ -279,7 +378,7 @@ sub OnTimer {
 			repeat => $frame->{repeat} || 1,
 		};
 
-		print " setting WxFrame to $self->{frameset}->{width}x$self->{frameset}->{height} (WxH)\n";
+		print " setting WxFrame to ". $self->{frameset}->{width} ."x". $self->{frameset}->{height} ." (WxH)\n";
 		$self->SetSize($self->{frameset}->{width}, $self->{frameset}->{height});
 		$self->Show( 1 );
 		$self->{panel}->SetFocus();
@@ -287,7 +386,17 @@ sub OnTimer {
 		$self->{laid_out} = 1;
 	}
 
+	if($self->{resize}){
+		my $width = int($self->{frameset}->{width} * $self->{scale});
+		my $height = int($self->{frameset}->{height} * $self->{scale});
+		print " resizing WxFrame to ". $width ."x". $height ." (WxH)\n";
+		$self->SetSize($width, $height);
+		delete($self->{resize});
+	}
+
 	$self->{dc} = Wx::PaintDC->new($self->{panel}) unless $self->{dc}; # can't remember if it's ok to store a DC
+
+	$self->{dc}->SetUserScale($self->{scale},$self->{scale});
 
 	my $frame = $self->{frames}->[ $self->{index} ];
 
@@ -327,13 +436,24 @@ sub OnKey {
 	my ($self, $event) = @_;
 
 	my $keycode = $event->GetKeyCode();
-
 	# print "OnKey: $keycode \n";
 
-	if($keycode == 46 ){ # . (qwerty >)
+	if($keycode == 43 ){ # +
+		$self->{parent}->scale('up');
+	}elsif($keycode == 45 ){ # -
+		$self->{parent}->scale('down');
+	}elsif($keycode == 46 ){ # . (qwerty >)
 		$self->{parent}->step('forward');
 	}elsif($keycode == 44 ){ # , (qwerty <)
 		$self->{parent}->step('backward');
+	}elsif($keycode == 49 ){ # 1
+		$self->{parent}->scale(1);
+	}elsif($keycode == 50 ){ # 2
+		$self->{parent}->scale(2);
+	}elsif($keycode == 51 ){ # 3
+		$self->{parent}->scale(3);
+	}elsif($keycode == 52 ){ # 4
+		$self->{parent}->scale(4);
 	}elsif($keycode == 78 ){ # n
 		print " slow down by 20% \n";
 		$self->{'parent'}->{delay_modifier} += 0.2;
@@ -343,10 +463,14 @@ sub OnKey {
 	}elsif($keycode == 66 ){ # b
 		print " speed modifier reset \n";
 		delete($self->{'parent'}->{delay_modifier});
-	}elsif($keycode == 315 ){ # arrow up
-		$self->{parent}->step('forward');
-	}elsif($keycode == 317 ){ # arrow down
+	}elsif($keycode == 314 ){ # arrow left
 		$self->{parent}->step('backward');
+	}elsif($keycode == 315 || $keycode == 366){ # arrow up || page up
+		$self->{parent}->file_navigation('previous');
+	}elsif($keycode == 316 ){ # arrow right
+		$self->{parent}->step('forward');
+	}elsif($keycode == 317 || $keycode == 367){ # arrow down || page down
+		$self->{parent}->file_navigation('next');
 	}elsif($keycode == 32 ){ # space
 		if($self->{parent}->{step_mode}){
 			$self->{parent}->play();
@@ -381,8 +505,8 @@ sub icon_ref {
 " X.........X    ",
 " X.........X    ",
 " X.........XXX  ",
-" X.........X X  ",
-" XXXXXXXXXXX X  ",
+" X.........X.X  ",
+" XXXXXXXXXXX.X  ",
 "   X.........XXX",
 "   X.........X.X",
 "   XXXXXXXXXXX.X",
@@ -416,33 +540,45 @@ During playback, playajpeg can be controled by keyboard and by mouse:
 
 =over
 
-=item B<ARROW UP / MOUSE WHEEL UP / "." (dot)>
+=item B<ARROW RIGHT> or B<MOUSE WHEEL UP> or B<"." (dot)>
 
 Enter step mode, step forward.
 
-=item B<ARROW DOWN / MOUSE WHEEL DOWN / "," (comma)>
+=item B<ARROW LEFT> or B<MOUSE WHEEL DOWN> or B<"," (comma)>
 
 Enter step mode, step backward.
 
-=item B<SPACE / MOUSE CLICK>
+=item B<SPACE> or B<MOUSE CLICK>
 
 Toggle (start/stop) playback. Enter or exit step mode.
 
-=item B<M>
+=item B<"1"> - B<"4">
+
+Set display zoom/ scaling factor.
+
+=item B<SHIFT + MOUSE WHEEL UP / DOWN> or B<"+" / "-">
+
+Set display zoom/scaling factor, from x0.25 - x8.
+
+=item B<"M">
 
 Speed up animation by 20%.
 
-=item B<N>
+=item B<"N">
 
 Slow down animation by 20%.
 
-=item B<B>
+=item B<"B">
 
 Reset speed to normal.
 
-=item B<X / Q / ESC>
+=item B<"X">, B<"Q"> or B<ESC>
 
 Stop animation and exit playajpeg.
+
+=item B<ARROW UP> / B<ARROW DOWN> or B<PAGE UP> / B<PAGE DOWN>
+
+Change to the next/ previous AJPEG file in current directory.
 
 =back
 

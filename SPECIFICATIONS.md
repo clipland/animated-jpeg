@@ -1,5 +1,5 @@
 Proposed specifications for Animated JPEG/JFIF, or colloquially "Animated JPEG"
-("AJPEG"). Version 0.
+("AJPEG"). Version 0. Revision 2.
 
 
 ## Introduction
@@ -97,7 +97,7 @@ The proposed suffix for animated JPEG is .ajpeg, but as the format does not
 interfere with Motion-JPEG or single-image JPEG display, suffixes .mjpeg and
 .jpg/.jpeg or even .ani.jpg can be used.
 
-The proposed MIME-Type is "image/jpeg; ajpeg=1".
+The proposed MIME-Type is "image/ajpeg".
 
 Coming versions might allow:
 
@@ -132,6 +132,7 @@ Although the following data-structures will very seldomly produce a binary FF,
 note that in case the byte FF appears within the AJPEG segment, it must be
 followed by a binary zero (0x00), according to JFIF spec.
 
+
 ### Delay
 
 Binary key 0x01 -> followed by int8u (C) for delays 0-255ms
@@ -155,8 +156,13 @@ lower bound (longer delay).
 Value meaning is the same as in animated GIFs ("delay before painting next
 frame").
 
-Note that the AJPEGs default 100ms delay per frame (10fps) is lower than what
+Note that the AJPEG default of 100ms delay per frame (10fps) is lower than what
 most players default to for Motion-JPEGs (usually 40ms/ 25fps).
+
+Also note that browsers usually introduce an upper limit for frame-rate. Very
+low delay values, mostly below 0.02s, some below 0.06s, are rounded up to 0.1s
+or 100ms. That's why many animated GIFs set delay to 0 while actually expecting
+the playback rate to be 10fps.
 
 
 ### Repeat

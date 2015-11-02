@@ -65,7 +65,17 @@ command-line:
 
 or, via CPAN:
 
-    sudo cpan -i CLIPLAND/Image-Animated-JPEG-0.01_1.tar.gz
+    sudo cpan -i CLIPLAND/Image-Animated-JPEG-0.01_2.tar.gz
+
+If you'd like to set a MIME-Type for AJPEGs on your system and want to play
+such files with bundled playajpeg, then there's a .desktop and a .xml file
+in the /debian directory of this release. For a local install, on Ubuntu/Linux
+do this:
+
+    cp ./debian/image-ajpeg.xml ~/.local/share/mime/packages/image-ajpeg.xml
+    cp ./debian/playajpeg.desktop ~/.local/share/applications/playajpeg.desktop
+    update-mime-database ~/.local/share/mime
+    update-desktop-database ~/.local/share/applications    
 
 ### CAVEATS
 
