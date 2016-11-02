@@ -22,7 +22,9 @@ WriteMakefile(
 	EXE_FILES	=> [
 		'bin/makeajpeg',
 		'bin/playajpeg',
-		'bin/gif2ajpeg'
+		'bin/gif2ajpeg',
+		'bin/ajpeg2gif',
+		'bin/ajpegtran'
 	],
 	META_MERGE	=> {
 		'meta-spec'	=> { version => 2 },

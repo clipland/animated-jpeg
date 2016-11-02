@@ -65,7 +65,7 @@ command-line:
 
 or, via CPAN:
 
-    sudo cpan -i CLIPLAND/Image-Animated-JPEG-0.01_2.tar.gz
+    sudo cpan -i CLIPLAND/Image-Animated-JPEG-0.01.tar.gz
 
 If you'd like to set a MIME-Type for AJPEGs on your system and want to play
 such files with bundled playajpeg, then there's a .desktop and a .xml file
@@ -98,7 +98,7 @@ Clipland GmbH, [clipland.com](http://www.clipland.com/)
 
 ## COPYRIGHT & LICENSE
 
-Copyright 2013-2015 Clipland GmbH. All rights reserved.
+Copyright 2013-2017 Clipland GmbH. All rights reserved.
 
 This library is free software, dual-licensed under [GPLv3](http://www.gnu.org/licenses/gpl)
 and [Perl Artistic 2](http://opensource.org/licenses/Artistic-2.0).

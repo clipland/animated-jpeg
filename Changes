@@ -1,5 +1,16 @@
 Revision history for Image::Animated::JPEG
 
+0.01	2016-11-02
+	- left alpha stage, feature lock
+	- added missing .desktop and .xml files
+	- makeajpeg: new --split mode allows to disassemble a
+	  monolithic AJPEG to individual JPEG frame files
+	- gif2ajpeg: die on error from convert
+	- new ajpeg2gif offers the reverse operation of
+	  gif2ajpeg, via mogrify and gifsicle
+	- new ajpegtran crops a whole AJPEG animation
+	  lossless via jpegtran
+
 0.01_2	2015-11-02
 	- Specifications: proposed MIME-Type is now image/ajpeg,
 	  as previous use of a parameter to image/jpeg did not

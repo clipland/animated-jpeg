@@ -59,7 +59,8 @@ print " Setting repeat to $repeat \n" if $debug;
 
 print "Using ImageMagick's convert to extract individual frames from input-file $input_file\n" if $debug;
 mkdir($temp_dir) or die $!;
-system('convert', '-coalesce', '-quality', $quality, $input_file, $temp_dir .'/frame_%05d.jpg' );
+my $error = system('convert', '-coalesce', '-quality', $quality, $input_file, $temp_dir .'/frame_%05d.jpg' );
+die " Exiting: convert returned an error: $error \n" if $error;
 
 opendir(my $dh, $temp_dir) or die "can't opendir temp dir: $!";
 my @files = readdir($dh);
@@ -154,7 +155,7 @@ Clipland GmbH L<http://www.clipland.com/>
 
 =head1 COPYRIGHT & LICENSE
 
-Copyright 2012-2015 Clipland GmbH. All rights reserved.
+Copyright 2012-2017 Clipland GmbH. All rights reserved.
 
 This library is free software, dual-licensed under L<GPLv3|http://www.gnu.org/licenses/gpl>/L<AL2|http://opensource.org/licenses/Artistic-2.0>.
 You can redistribute it and/or modify it under the same terms as Perl itself.

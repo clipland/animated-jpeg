@@ -16,3 +16,7 @@ t/data/test0-fuji.jpg
 bin/playajpeg
 bin/makeajpeg
 bin/gif2ajpeg
+bin/ajpeg2gif
+bin/ajpegtran
+debian/playajpeg.desktop
+debian/image-ajpeg.xml

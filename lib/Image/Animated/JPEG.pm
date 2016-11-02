@@ -5,7 +5,7 @@ use warnings;
 
 use Encode;
 
-our $VERSION = '0.01_2';
+our $VERSION = '0.01';
 
 sub index {
 	my $io_file = shift;
@@ -411,8 +411,8 @@ to process single frames in order to extract APP0 markers, and it provides
 functions to encode and read segments in Animated JPEG's proposed segment data
 format, version 0.
 
-Also, this distribution comes bundled with three Animated JPEG utility scripts
-which employ this module's routines to create and play AJPEG files:
+Also, this distribution comes bundled with five Animated JPEG utility scripts
+which employ this module's routines to create, transform and play AJPEG files:
 
 =over
 
@@ -423,10 +423,19 @@ which employ this module's routines to create and play AJPEG files:
 =item * B<gif2ajpeg> - utilizes ImageMagick's I<convert> and I<makeani> to
 convert animated gif files to Animated JPEG files.
 
+=item * B<ajpeg2gif> - uses I<makeajpeg> to assemble and animated GIF from
+an animated JPEG.
+
+=item * B<ajpegtran> - lossless cropping of an entire animated JPEG animation
+by executing I<jpegtran> on every separate frame.
+
 =back
 
 If you are interested in details of the proposed AJPEG format, the Why and How,
 then read the README and SPECIFICATIONS files bundled with this distribution.
+
+Also, the README file provides further information on how to set MIME-Type, etc.
+on a *nix system so I<.ajpeg> files get associated with I<playajpeg>.
 
 =head1 FUNCTIONS
 
@@ -546,7 +555,7 @@ Clipland GmbH L<http://www.clipland.com/>
 
 =head1 COPYRIGHT & LICENSE
 
-Copyright 2013-2015 Clipland GmbH. All rights reserved.
+Copyright 2013-2017 Clipland GmbH. All rights reserved.
 
 This library is free software, dual-licensed under L<GPLv3|http://www.gnu.org/licenses/gpl>/L<AL2|http://opensource.org/licenses/Artistic-2.0>.
 You can redistribute it and/or modify it under the same terms as Perl itself.

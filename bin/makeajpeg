@@ -23,12 +23,76 @@ GetOptions(
 	'repeat|r:s'		=> \my $repeat,
 	'keep-mtime'		=> \my $keep_mtime,
 	'metadata-filename'	=> \my $metadata_filename,
+	'split'			=> \my $split,
 	'debug|d'		=> \my $debug,
 	'force|f'		=> \my $force,
 	'help|h'		=> \my $help,
 ) or pod2usage(2);
 pod2usage(1) unless !$help;
 
+## split mode
+if($split){
+	require Cwd;
+	require Path::Tiny;
+	Path::Tiny->import;
+
+	die " Can't process more than one file in split mode!\n" if @ARGV > 1;
+	die " Could not find file $ARGV!\n" unless -f $ARGV[0];
+	print " Splitting file $ARGV[0]\n" if $debug;
+
+	open(my $io_file, '<', $ARGV[0]) or die $!;
+	binmode($io_file);
+	print " Building file index... \n" if $debug;
+	my $index = Image::Animated::JPEG::index($io_file); # , { debug => $debug }
+
+	my $basename = path($ARGV[0])->basename(qr/\.\w{2,5}$/);
+	# my $path = path($ARGV[0])->parent; # relative to input-file
+	my $path = Cwd::cwd(); # relative to where we're called / cwd()
+
+	my @stat = stat($ARGV[0]) if $keep_mtime;
+
+	my $cnt;
+	for my $frame (@$index){
+		$cnt++;
+
+		my $framename = $basename . '_frame' . sprintf("%04d", $cnt) . '.jpg';
+		my $framepath = path($path,$framename)->canonpath;
+
+		die " Frame output won't overwrite existing file $framepath unless --force is set!\n" if -f $framepath && !$force;
+
+		# let's assume these frames aren't too big and we can use a temp scalar
+		seek($io_file, $frame->{offset},0);
+		my $buffer;
+		sysread($io_file,$buffer,$frame->{length});
+		print " -Extracting frame #". $cnt ." data: offset:$frame->{offset}, length:$frame->{length}, buffer: ". length($buffer) ."\n" if $debug;
+
+# from playajpeg
+#		my $ref = Image::Animated::JPEG::process(\$buffer);
+#		my $per_frame;
+#		if($ref && $ref->{AJPEG}){
+#			$per_frame = Image::Animated::JPEG::decode_ajpeg_data( substr($buffer,$ref->{AJPEG}->{data_offset},$ref->{AJPEG}->{data_length}), { debug => 1});
+
+#		my $per_frame = Image::Animated::JPEG::decode_ajpeg_data( $buffer, { debug => 1 } );
+# use Data::Dumper;
+# print Dumper $per_frame;
+
+		print "  Writing frame #". $cnt ." to $framepath \n" if $debug;
+		open(my $fh, ">", $framepath) or die "  Can't open $framepath: $!";
+		binmode($fh);
+		# syswrite($fh,$buffer);
+		print $fh $buffer;
+		close($fh);
+
+		if($keep_mtime){
+			print "  Adjusting mtime of frame output file \n" if $debug;
+			utime(0, $stat[9], $framepath);
+		}
+	}
+
+	exit;
+}
+
+## default assemble mode
 pod2usage({ -message => "\n Please supply an output-file and a number of JPEG images (frames)\n on command-line.\n Example makeajpeg -o out.jpg frame1.jpg frame2.jpg\n", exitval => 2 }) unless $ARGV[0] && $output_file;
 die " Output-file $output_file exists! (Use --force to overwrite)\n" if -f $output_file && !$force;
 for(@ARGV){ die " Could not find file $_!\n" unless -f $_; }
@@ -143,7 +207,16 @@ output-file to be the same as the mtime of the first frame.
 Flag. Tells makeajpeg to store the filename of the file the frame originally was
 stored as into each AJPEG frame. By keeping this data with each frame, you can
 restore the original file structure when an AJEPG animation is broken into files
-again.
+again (for example with --split).
+
+=item B<--split>
+
+Flag. Tells makeajpeg to do the reverse of what it normally does: it will
+disassemble a given AJPEG file into a number of individual JPEG frames.
+ The --keep-mtime flag sets frames' file dates to the mtime of the
+AJPEG file. Will choke when frame filenames exist, unless --force is set.
+Todo: If file names were stored in frames (for example with --metadata-filename)
+it will restore original names.
 
 =item B<--force, -f>
 
@@ -186,7 +259,7 @@ Clipland GmbH L<http://www.clipland.com/>
 
 =head1 COPYRIGHT & LICENSE
 
-Copyright 2012-2015 Clipland GmbH. All rights reserved.
+Copyright 2012-2017 Clipland GmbH. All rights reserved.
 
 This library is free software, dual-licensed under L<GPLv3|http://www.gnu.org/licenses/gpl>/L<AL2|http://opensource.org/licenses/Artistic-2.0>.
 You can redistribute it and/or modify it under the same terms as Perl itself.
