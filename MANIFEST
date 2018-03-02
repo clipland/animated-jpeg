@@ -20,3 +20,7 @@ bin/ajpeg2gif
 bin/ajpegtran
 debian/playajpeg.desktop
 debian/image-ajpeg.xml
+js/ajpeg.js
+js/example.html
+js/frame1.jpg
+js/frames_delay77.ajpeg
